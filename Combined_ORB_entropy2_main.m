@@ -2,21 +2,20 @@ clear all; close all; clc;
 
 %% 
 magnificationFactor = [0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5];
-format = 'High-Rise Building window1_%s.jpg';
+format = 'Environment%s.jpg';
 
 for i = 1:length(magnificationFactor)
    filename = sprintf(format,num2str(i));
    L = imread(filename);
    [height(i),width(i),~] = size(L);
-%    if magnificationFactor(i) == 1.0
-%        % Set the factor to extract part of the picture
-%         lower_BC = 600/height(i);
-%         upper_BC = 800/height(i);
-%    end
+   if magnificationFactor(i) == 1.0
+       % Set the factor to extract part of the picture
+        lower_BC = 600/height(i);
+        upper_BC = 800/height(i);
+   end
 end
 
-lower_BC = 0.1; upper_BC = 0.9;
-patch_size = 7; STD_thre = 20; relaxation_coe = 20*0.2695;
+patch_size = 7; STD_thre = 20; relaxation_coe = 10;
 Num_cp = zeros(1,length(magnificationFactor));
 tic;
 fprintf('Processing the image...\n');
