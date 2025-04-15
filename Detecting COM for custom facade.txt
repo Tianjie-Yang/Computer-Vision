@@ -1,0 +1,226 @@
+#include "cv.h"
+#include "highgui.h"
+#include <iostream>`
+#include <stdio.h>
+#include <math.h>
+
+using namespace std;
+int Binary_digit[640][480] = { 0 };
+int R[640][480] = { 0 };
+int G[640][480] = { 0 };
+int B[640][480] = { 0 };
+long double deg = 0;
+int continuee = 0;
+
+int main()
+{
+	//Initialise the pointer of the live stream capture (constantly changing)
+	CvCapture* capture = 0;
+	//Initialise the pointer of the image to be processed (not used yet)
+	IplImage* processedImage = 0;
+
+
+	cout << "Program for computing the centre of mass for a custom facade" << endl;
+
+	// Initializes capturing video from camera(0: Integrated camera, 1: web-cam)
+	capture = cvCaptureFromCAM(0);
+	// (Optional) Check whether the web-cam is working or not
+	if (!capture) {
+		fprintf(stderr, "Could not initialize capturing...\n");
+		return -1; // If not, terminate the program instantly
+	}
+
+
+	// Creates image capture window
+	cvNamedWindow("Camera image", 1);
+
+	// Initialise camera image pointer. IplImage: Intel Image Processing Library
+	IplImage* frame = 0;
+
+	// Grabs and returns a single frame from camera to measure the size of the window
+	frame = cvQueryFrame(capture);
+
+
+	// Print out the size of the window (height and width)
+	//cout << "image width =" << frame->width << " height =" << frame->height;
+	//cout << " depth =" << frame->depth << " channels =" << frame->nChannels << endl;
+	//width =640   height=480 depth=8 channels=3
+	do{
+
+		printf("Press 'q' to capture\n");
+
+		do {
+			frame = cvQueryFrame(capture);
+			if (!frame) {
+				break;
+			}
+			// Obtain a colored live stream and keep updating the RGB value for each pixel
+			for (int y = 0; y < frame->height; y++) {
+				for (int x = 0; x < frame->width; x++) {
+					//  This is a pointer to the start of the current row.
+					//  The image is stored as a 1-D array which is mapped back
+					//  into 2-space by multiplying the widthStep
+					uchar *row = (uchar*)(frame->imageData + frame->widthStep * y);
+					R[x][y] = row[x * 3];
+					G[x][y] = row[x * 3 + 1];
+					B[x][y] = row[x * 3 + 2];
+				}
+			}
+			cvShowImage("Camera image", frame);
+		} while ('q' != cvWaitKey(10));
+
+		printf("Press 'w' to segement the facade\n");
+
+		do {
+			frame = cvQueryFrame(capture);
+			if (!frame) {
+				break;
+			}
+			// Convert the image to gray
+			for (int y = 0; y < frame->height; y++) {
+				for (int x = 0; x < frame->width; x++) {
+					uchar *row = (uchar*)(frame->imageData + frame->widthStep * y);
+					int gray = (R[x][y] + G[x][y] + B[x][y]) / 3;
+					row[x * 3] = gray;
+					row[x * 3 + 1] = gray;
+					row[x * 3 + 2] = gray;
+				}
+			}
+			cvShowImage("Camera image", frame);
+		} while ('w' != cvWaitKey(10));
+
+
+		printf("Press 'e' to continue\n");
+
+		do {
+			frame = cvQueryFrame(capture);
+			if (!frame) {
+				break;
+			}
+			// Convert half of the image to gray
+			for (int y = 0; y < frame->height; y++) {
+				for (int x = 0; x < frame->width; x++) {
+					// This is a pointer to the start of the current row.
+					//  Note: The image is stored as a 1-D array which is mapped back
+					//  into 2-space by multiplying the widthStep (the image width rounded to
+					//  a "nice" value, eg a multiple of 4 or 8 depending on the OS and CPU)
+					//  by the row number.
+					uchar *row = (uchar*)(frame->imageData + frame->widthStep * y);
+
+					//int gray = (row[x * 3] + row[x * 3 + 1] + row[x * 3 + 2]) / 3;
+					int gray = (R[x][y] + G[x][y] + B[x][y]) / 3;
+					if (gray > 120) { //Aet up the threshold for black and white pixels
+						/////////////////////// white
+						row[x * 3] = 255;
+						row[x * 3 + 1] = 255;
+						row[x * 3 + 2] = 255;
+						Binary_digit[x][y] = 0;
+					}
+					else {
+						row[x * 3] = 0;
+						row[x * 3 + 1] = 0;
+						row[x * 3 + 2] = 0;
+						Binary_digit[x][y] = 1;
+					}
+				}
+			}
+			cvShowImage("Camera image", frame);
+
+		} while ('e' != cvWaitKey(10));
+
+		cout << "Calculate press r" << endl;
+		//Initialise the parameters
+		int numOfPixel = 0;
+		long double m10 = 0;
+		long double m01 = 0;
+		long double m20 = 0;
+		long double m02 = 0;
+		long double m11 = 0;
+		long double temp = 0;
+		long double thetata = 0;
+		long int m00 = numOfPixel;
+		do {
+
+			if ('r' == cvWaitKey(10)) {
+				for (int x = 0; x < 640; x++) {
+					for (int y = 0; y < 480; y++) {
+						if (Binary_digit[x][y] == 1) {
+							m10 += x;
+							m01 += y;
+							m20 += x * x;
+							m02 += y * y;
+							m11 += x * y;
+							numOfPixel++;
+						}
+					}
+				}
+				m00 = numOfPixel;
+				cout << "The area has " << numOfPixel << endl;
+				long double v1 = m00 * m11;
+				long double v2 = m10 * m01;
+				long double v3 = m00 * m20;
+				long double v4 = m10 * m10;
+				long double v5 = m00 * m02;
+				long double v6 = m01 * m01;
+				long double c1 = v1 - v2;
+				long double c2 = v3 - v4;
+				long double c3 = v5 - v6;
+				long double c4 = c2 - c3;
+				long double b1 = c1 / c4;
+				long double b2 = b1 * 2;
+				long double b3 = atan2(c1 * 2, c4); //2*theta = arctan(2(m00*m11 - m10*m01)/((m00*m20 - m10^2)-(m00*m02 - m01^2))
+				deg = 57.3*0.5*b3; // The coefficient of 0.5 have the angle on the RHS, 57.3 is the deg of 1 radius
+				cout << "The m00 is " << m00 << endl;
+				cout << "The m11 is " << m11 << endl;
+				cout << "The m01 is " << m01 << endl;
+				cout << "The m10 is " << m10 << endl;
+				cout << "The m20 is " << m20 << endl;
+				cout << "The v1 is " << v1 << endl;
+				cout << "The v2 is " << v2 << endl;
+				cout << "The v3 is " << v3 << endl;
+				cout << "The v4 is " << v4 << endl;
+				cout << "The v5 is " << v5 << endl;
+				cout << "The v6 is " << v6 << endl;
+				cout << "The c1 is " << c1 << endl;
+				cout << "The c2 is " << c2 << endl;
+				cout << "The c3 is " << c3 << endl;
+				cout << "The c4 is " << c4 << endl;
+				cout << "The b1 is " << b1 << endl;
+				cout << "The b2 is " << b2 << endl;
+				cout << "The b3 is " << b3 << endl;
+
+				cout << "The x-coordinate of central of mass is x = " << m10 / m00 << endl;
+				cout << "The y-coordinate of central of mass is y = " << m01 / m00 << endl;
+				cout << "The x-coordinate of of the rotation axis is " << m20 << endl;
+				cout << "The y-coordinate of of the rotation axis is " << m02 << endl;
+				cout << "The angle is " << deg << endl;
+				printf("The orientation is %.70lf\n", deg);
+				cout << "Press 'd' to show red cross" << endl;
+			}
+			if ('d' == cvWaitKey(10)) {
+				//frame = cvQueryFrame(capture);
+				if (!frame) {
+					break;
+				}
+	
+				deg = deg * 3.14159265 / 180;// Convert the degree back to radius for 'cvCircle' and 'cvLine'
+				// cvCircle first accept the input frame, then determine the centre of the circle, then accept the radius and color, finally the thickness, line type and shift
+				cvCircle(frame, cvPoint(m10 / m00, m01 / m00), 5, cvScalar(255, 0, 0), 1, 8, 0);
+				// Similar syntax for cvLine (*50 means a random length of pixel, indicating the length of the line)
+				cvLine(frame, cvPoint(m10 / m00, m01 / m00), cvPoint(m10 / m00 + cos(deg) * 50, m01 / m00 + sin(deg) * 50), cvScalar(0, 255, 0), 1, 8, 0);
+				cvShowImage("Camera image", frame);
+				cout << "Press 't' to continue" << endl;
+			}
+
+		} while ('t' != cvWaitKey(10));
+		printf("Do you wish to continue(1/0)\n");
+		scanf("%d", &continuee);
+	} while (continuee == 1);
+	// Releases the CvCapture structure
+	cvReleaseCapture(&capture);
+	// Destroys all the HighGUI windows
+	cvDestroyAllWindows();
+
+	return 0;
+
+}//end of main
